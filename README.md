@@ -20,6 +20,9 @@ Welcome to the official **Hackathon Submission Template** for the **South Africa
 │   └── README.md
 ├── src/
 │   └── README.md
+    └── index.html
+    └── financial.html
+    └── app.py
 ├── vendor/
 │   └── README.md
 ├── .dockerignore

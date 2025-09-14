@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Financial World Quest: Camera Scan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2b9589;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        body.loading {
+            visibility: hidden;
+            opacity: 0;
+        }
+        body.loaded {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+        .blurry-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://images.unsplash.com/photo-1592838069827-54b4545a8d88') no-repeat center center/cover;
+            filter: blur(8px);
+            z-index: -1;
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            font-family: 'Poppins', sans-serif;
+        }
+        .sign-up-btn {
+            background-color: #2b9589;
+            color: white;
+        }
+        .sign-up-btn:hover {
+            background-color: #247a71;
+        }
+        .inline-link {
+            color: #2b9589;
+        }
+        .inline-link:hover {
+            text-decoration: underline;
+        }
+        #camera-feed {
+            width: 100%;
+            height: 100vh;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        #ar-button, #stop-scan-button {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .quiz-modal, .ai-response-modal, .score-modal, .solutions-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .quiz-content, .ai-response-content, .score-content, .solutions-content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            max-width: 400px;
+            text-align: left;
+            font-family: 'Poppins', sans-serif;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .quiz-content input, .quiz-content textarea, .ai-response-content textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .quiz-content button, .ai-response-content button, .score-content button, .solutions-content button {
+            background: #2b9589;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .quiz-content button:hover, .ai-response-content button:hover, .score-content button:hover, .solutions-content button:hover {
+            background: #247a71;
+        }
+        .ai-response-content a, .solutions-content a {
+            color: #2b9589;
+            text-decoration: none;
+        }
+        .ai-response-content a:hover, .solutions-content a:hover {
+            text-decoration: underline;
+        }
+        .ai-response-content h3, .solutions-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .ai-response-content ul, .solutions-content ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+        .ai-response-content li, .solutions-content li {
+            margin-bottom: 8px;
+        }
+        .ai-response-loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .ai-response-loading .loading-spinner {
+            margin-bottom: 10px;
+        }
+        .ai-response-loading p {
+            color: #2b9589;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .scan-instructions {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 20;
+        }
+        .options-buttons, .scenario-buttons {
+            position: fixed;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .option-button, .scenario-button {
+            background: #2b9589;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .option-button:hover, .scenario-button:hover {
+            background: #247a71;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .trophy-icon {
+            font-size: 3rem;
+            color: #FFD700;
+            margin-bottom: 10px;
+            animation: flash 1s infinite;
+            display: block;
+            text-align: center;
+        }
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .quiz-option {
+            display: block;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .quiz-option:hover {
+            background-color: #e0f7fa;
+        }
+        .quiz-option input {
+            margin-right: 10px;
+        }
+        .digital-human-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        #digital-human-video {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #2b9589;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .digital-human-container.fullscreen {
+            width: 100vw;
+            height: 100vh;
+            top: 0;
+            left: 0;
+            bottom: unset;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+        .digital-human-container.fullscreen #digital-human-video {
+            width: 90vw;
+            height: 90vh;
+            max-width: 800px;
+            max-height: 450px;
+            border-radius: 0;
+            border: none;
+        }
+        .error-message-video {
+            color: #dc2626;
+            font-size: 14px;
+            text-align: center;
+            position: fixed;
+            bottom: 130px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+    <script type="module">
+        import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js';
+        import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCfa827mvCLf1ETts6B_DmCfb7owTohBxk",
+            authDomain: "nbi-green-economy.firebaseapp.com",
+            projectId: "nbi-green-economy",
+            storageBucket: "nbi-green-economy.firebasestorage.app",
+            messagingSenderId: "53732340059",
+            appId: "1:53732340059:web:3fb3f086c6662e1e9baa7e",
+            measurementId: "G-37VRZ5CGE4"
+        };
+
+        let app;
+        if (!getApps().length) {
+            app = initializeApp(firebaseConfig);
+        } else {
+            app = getApp();
+        }
+        const db = getFirestore(app);
+
+        let tempUserId = new URLSearchParams(window.location.search).get('tempUserId') || 'guest_' + Math.random().toString(36).substr(2, 9);
+
+        // Camera Setup
+        const video = document.getElementById('camera-feed');
+        let stream = null;
+
+        // Digital Human Video
+        const digitalHumanVideo = document.getElementById('digital-human-video');
+        const digitalHumanContainer = document.querySelector('.digital-human-container');
+        const errorMessageVideo = document.getElementById('error-message-video');
+
+        function startDigitalHumanVideo() {
+            console.log('Attempting to play digital human video');
+            digitalHumanVideo.muted = !digitalHumanContainer.classList.contains('fullscreen');
+            digitalHumanVideo.play().catch(error => {
+                console.error('Digital human video playback failed:', error);
+                errorMessageVideo.textContent = 'Failed to play digital human video. Check file or permissions.';
+                errorMessageVideo.style.display = 'block';
+                setTimeout(() => errorMessageVideo.style.display = 'none', 5000);
+            });
+        }
+
+        digitalHumanVideo.addEventListener('click', () => {
+            console.log('Digital human video clicked');
+            digitalHumanContainer.classList.toggle('fullscreen');
+            digitalHumanVideo.muted = !digitalHumanContainer.classList.contains('fullscreen');
+            startDigitalHumanVideo();
+            trackInteraction('video', digitalHumanContainer.classList.contains('fullscreen') ? 'video_expanded' : 'video_shrunk', 'Digital Human');
+        });
+
+        window.addEventListener('unload', () => {
+            console.log('Unloading page, pausing digital human video');
+            digitalHumanVideo.pause();
+        });
+
+        // Streak and Score History
+        let streak = parseInt(localStorage.getItem('streak')) || 0;
+        let quizHistory = JSON.parse(localStorage.getItem('quizHistory')) || [];
+
+        // Daily Mission Questions (30 questions)
+        const missionQuestions = [
+            {
+                question: "What is the 50/30/20 budgeting rule?",
+                options: [
+                    "50% needs, 30% wants, 20% savings/debt repayment",
+                    "50% savings, 30% needs, 20% wants",
+                    "50% wants, 30% needs, 20% savings",
+                    "50% debt repayment, 30% savings, 20% needs"
+                ],
+                correct: 0,
+                explanation: "The 50/30/20 rule allocates 50% of income to needs (e.g., rent, groceries), 30% to wants (e.g., entertainment), and 20% to savings or debt repayment. Learn more at [MyMoney.gov](https://www.mymoney.gov)."
+            },
+            {
+                question: "What is the snowball method for paying off debt?",
+                options: [
+                    "Pay largest debts first",
+                    "Pay smallest debts first, then move to larger ones",
+                    "Pay highest interest rate debts first",
+                    "Pay all debts equally"
+                ],
+                correct: 1,
+                explanation: "The snowball method focuses on paying off the smallest debt first while making minimum payments on others, then rolling payments to the next smallest debt. See [Debt.org](https://www.debt.org)."
+            },
+            {
+                question: "How much should you save monthly to reach R5,000 in a year?",
+                options: [
+                    "R208",
+                    "R417",
+                    "R500",
+                    "R625"
+                ],
+                correct: 1,
+                explanation: "To save R5,000 in 12 months, divide R5,000 by 12 = R416.67, rounded to R417. Automate savings with apps like [YNAB](https://www.ynab.com)."
+            },
+            {
+                question: "What is a safe investment for a beginner with R2,000?",
+                options: [
+                    "Cryptocurrency",
+                    "Individual stocks",
+                    "Low-cost ETF or unit trust",
+                    "Real estate"
+                ],
+                correct: 2,
+                explanation: "Low-cost ETFs or unit trusts in a tax-free savings account are safer for beginners due to diversification and low fees. Visit [Investopedia](https://www.investopedia.com)."
+            },
+            {
+                question: "What is a stokvel?",
+                options: [
+                    "A type of credit card",
+                    "A community savings group",
+                    "A government bond",
+                    "A budgeting app"
+                ],
+                correct: 1,
+                explanation: "A stokvel is a community savings group where members contribute regularly and take turns receiving payouts, promoting financial inclusion. Read more at [Fin24](https://www.fin24.com)."
+            },
+            {
+                question: "What is the benefit of automating savings?",
+                options: [
+                    "Increases interest rates",
+                    "Reduces spending temptation",
+                    "Guarantees investment returns",
+                    "Eliminates taxes"
+                ],
+                correct: 1,
+                explanation: "Automating savings transfers money to a savings account before you can spend it, reducing temptation. Try [22seven](https://www.22seven.com)."
+            },
+            {
+                question: "What does APR stand for in loans?",
+                options: [
+                    "Annual Percentage Rate",
+                    "Average Payment Rate",
+                    "Adjusted Profit Ratio",
+                    "Annual Profit Return"
+                ],
+                correct: 0,
+                explanation: "APR (Annual Percentage Rate) is the yearly cost of borrowing, including interest and fees. Learn more at [ConsumerFinance.gov](https://www.consumerfinance.gov)."
+            },
+            {
+                question: "What is a good emergency fund size?",
+                options: [
+                    "1 month of expenses",
+                    "3-6 months of expenses",
+                    "R1,000",
+                    "10% of annual income"
+                ],
+                correct: 1,
+                explanation: "An emergency fund should cover 3-6 months of living expenses to handle unexpected costs. See [MoneySmart.gov](https://www.moneysmart.gov)."
+            },
+            {
+                question: "What is compound interest?",
+                options: [
+                    "Interest paid only on the principal",
+                    "Interest earned on principal and previous interest",
+                    "A type of tax on savings",
+                    "A fixed interest rate"
+                ],
+                correct: 1,
+                explanation: "Compound interest is earned on the initial principal and accumulated interest, growing savings over time. Explore [Investopedia](https://www.investopedia.com)."
+            },
+            {
+                question: "What is a benefit of a tax-free savings account?",
+                options: [
+                    "Guaranteed high returns",
+                    "No taxes on investment growth",
+                    "Free financial advice",
+                    "Unlimited withdrawals"
+                ],
+                correct: 1,
+                explanation: "A tax-free savings account allows investment growth without taxes, maximizing returns. Check [SARS.gov.za](https://www.sars.gov.za)."
+            },
+            {
+                question: "What is the purpose of a credit score?",
+                options: [
+                    "To track your savings",
+                    "To determine loan eligibility and interest rates",
+                    "To measure investment returns",
+                    "To calculate taxes owed"
+                ],
+                correct: 1,
+                explanation: "A credit score assesses your creditworthiness, affecting loan approvals and interest rates. Learn more at [TransUnion](https://www.transunion.com)."
+            },
+            {
+                question: "What is a fixed deposit account?",
+                options: [
+                    "A checking account with high interest",
+                    "A savings account with a fixed term and interest rate",
+                    "A loan with fixed payments",
+                    "An investment in stocks"
+                ],
+                correct: 1,
+                explanation: "A fixed deposit locks your money for a set term at a fixed interest rate, offering higher returns than regular savings. See [StandardBank.co.za](https://www.standardbank.co.za)."
+            },
+            {
+                question: "What is the avalanche method for debt repayment?",
+                options: [
+                    "Pay smallest debts first",
+                    "Pay highest interest rate debts first",
+                    "Pay all debts equally",
+                    "Pay lowest interest rate debts first"
+                ],
+                correct: 1,
+                explanation: "The avalanche method prioritizes debts with the highest interest rates to minimize total interest paid. Visit [Debt.org](https://www.debt.org)."
+            },
+            {
+                question: "What is a benefit of diversifying investments?",
+                options: [
+                    "Guarantees high returns",
+                    "Reduces risk by spreading investments",
+                    "Eliminates taxes",
+                    "Increases loan eligibility"
+                ],
+                correct: 1,
+                explanation: "Diversification spreads investments across assets to reduce risk. Learn more at [Investopedia](https://www.investopedia.com)."
+            },
+            {
+                question: "What is a debit card primarily used for?",
+                options: [
+                    "Borrowing money",
+                    "Investing in stocks",
+                    "Spending money from your bank account",
+                    "Earning interest"
+                ],
+                correct: 2,
+                explanation: "A debit card allows you to spend money directly from your bank account. See [ConsumerFinance.gov](https://www.consumerfinance.gov)."
+            },
+            {
+                question: "What is the role of a financial advisor?",
+                options: [
+                    "To manage your taxes",
+                    "To provide personalized financial planning",
+                    "To issue credit cards",
+                    "To regulate banks"
+                ],
+                correct: 1,
+                explanation: "A financial advisor offers tailored advice on budgeting, investing, and planning. Find one via [FPSB.org](https://www.fpsb.org)."
+            },
+            {
+                question: "What is inflation?",
+                options: [
+                    "A decrease in prices",
+                    "An increase in the purchasing power of money",
+                    "A rise in prices over time",
+                    "A type of investment"
+                ],
+                correct: 2,
+                explanation: "Inflation is the rate at which prices for goods and services increase, reducing purchasing power. Learn more at [ReserveBank.gov.za](https://www.resbank.co.za)."
+            },
+            {
+                question: "What is a good debt-to-income ratio for loan approval?",
+                options: [
+                    "Below 36%",
+                    "Above 50%",
+                    "Exactly 25%",
+                    "No limit"
+                ],
+                correct: 0,
+                explanation: "A debt-to-income ratio below 36% is generally favorable for loan approvals. See [ConsumerFinance.gov](https://www.consumerfinance.gov)."
+            },
+            {
+                question: "What is a bond in investing?",
+                options: [
+                    "A share in a company",
+                    "A loan to a company or government",
+                    "A type of savings account",
+                    "A tax-free investment"
+                ],
+                correct: 1,
+                explanation: "A bond is a loan you make to a company or government in exchange for interest payments. Visit [Investopedia](https://www.investopedia.com)."
+            },
+            {
+                question: "What is the benefit of a budget tracker app?",
+                options: [
+                    "Guarantees savings",
+                    "Monitors income and expenses",
+                    "Provides loans",
+                    "Increases credit score"
+                ],
+                correct: 1,
+                explanation: "Budget tracker apps like [Mint](https://www.mint.com) help monitor income and expenses to manage finances."
+            },
+            {
+                question: "What is a mutual fund?",
+                options: [
+                    "A single stock investment",
+                    "A pool of money invested in various assets",
+                    "A type of loan",
+                    "A savings account"
+                ],
+                correct: 1,
+                explanation: "A mutual fund pools money from investors to buy a diversified portfolio of assets. Learn more at [Investopedia](https://www.investopedia.com)."
+            },
+            {
+                question: "What is the purpose of a retirement annuity?",
+                options: [
+                    "To provide immediate income",
+                    "To save for retirement with tax benefits",
+                    "To pay off debts",
+                    "To invest in real estate"
+                ],
+                correct: 1,
+                explanation: "A retirement annuity helps save for retirement with tax advantages. See [SARS.gov.za](https://www.sars.gov.za)."
+            },
+            {
+                question: "What is a credit limit?",
+                options: [
+                    "The maximum amount you can borrow on a credit card",
+                    "The minimum payment on a loan",
+                    "The interest rate on savings",
+                    "The total savings in an account"
+                ],
+                correct: 0,
+                explanation: "A credit limit is the maximum amount you can borrow on a credit card. Visit [TransUnion](https://www.transunion.com)."
+            },
+            {
+                question: "What is the benefit of paying more than the minimum on a credit card?",
+                options: [
+                    "Increases credit limit",
+                    "Reduces interest paid over time",
+                    "Eliminates taxes",
+                    "Guarantees loan approval"
+                ],
+                correct: 1,
+                explanation: "Paying more than the minimum reduces interest costs and pays off debt faster. See [ConsumerFinance.gov](https://www.consumerfinance.gov)."
+            },
+            {
+                question: "What is a high-yield savings account?",
+                options: [
+                    "A savings account with higher interest rates",
+                    "A checking account with no fees",
+                    "An investment in stocks",
+                    "A loan with low interest"
+                ],
+                correct: 0,
+                explanation: "A high-yield savings account offers higher interest rates than regular savings accounts. Learn more at [NerdWallet](https://www.nerdwallet.com)."
+            },
+            {
+                question: "What is financial literacy?",
+                options: [
+                    "The ability to invest in stocks",
+                    "The knowledge to manage personal finances",
+                    "The skill to avoid taxes",
+                    "The process of getting loans"
+                ],
+                correct: 1,
+                explanation: "Financial literacy is understanding how to manage money, including budgeting, saving, and investing. Visit [MyMoney.gov](https://www.mymoney.gov)."
+            },
+            {
+                question: "What is the purpose of a balance transfer?",
+                options: [
+                    "To move money between savings accounts",
+                    "To transfer credit card debt to a lower interest rate card",
+                    "To pay off a mortgage",
+                    "To invest in bonds"
+                ],
+                correct: 1,
+                explanation: "A balance transfer moves credit card debt to a card with a lower interest rate to save on interest. See [CreditCards.com](https://www.creditcards.com)."
+            },
+            {
+                question: "What is a dividend?",
+                options: [
+                    "A type of loan",
+                    "A share of a company’s profits paid to shareholders",
+                    "A tax on investments",
+                    "A fee for banking"
+                ],
+                correct: 1,
+                explanation: "A dividend is a portion of a company’s profits distributed to shareholders. Learn more at [Investopedia](https://www.investopedia.com)."
+            },
+            {
+                question: "What is a good strategy to avoid overspending?",
+                options: [
+                    "Use only credit cards",
+                    "Create and follow a budget",
+                    "Invest all income",
+                    "Borrow money regularly"
+                ],
+                correct: 1,
+                explanation: "Creating and following a budget helps track and control spending. Try [YNAB](https://www.ynab.com)."
+            },
+            {
+                question: "What is the benefit of an online bank?",
+                options: [
+                    "Higher fees",
+                    "Lower fees and higher interest rates",
+                    "More physical branches",
+                    "Guaranteed loans"
+                ],
+                correct: 1,
+                explanation: "Online banks often have lower fees and higher interest rates due to reduced overhead costs. See [NerdWallet](https://www.nerdwallet.com)."
+            }
+        ];
+
+        // Daily Mission State
+        let currentQuestionIndex = 0;
+        let userAnswers = [];
+        let missionScore = 0;
+
+        // Daily Mission
+        function showDailyMission() {
+            console.log('Showing daily mission');
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            missionScore = 0;
+            showMissionQuestion();
+            document.getElementById('options-buttons').style.display = 'none';
+        }
+
+        function showMissionQuestion() {
+            console.log(`Showing mission question ${currentQuestionIndex + 1}`);
+            const modal = document.getElementById('quiz-modal');
+            if (!modal) {
+                console.error('Quiz modal not found');
+                alert('Error: Quiz modal not found. Please refresh the page.');
+                return;
+            }
+            modal.style.display = 'flex';
+            const quizText = document.getElementById('quiz-question');
+            const question = missionQuestions[currentQuestionIndex];
+            quizText.innerHTML = `
+                <p class="font-semibold">Question ${currentQuestionIndex + 1}/30: ${question.question}</p>
+                ${question.options.map((option, index) => `
+                    <label class="quiz-option">
+                        <input type="radio" name="mission-answer" value="${index}">
+                        ${option}
+                    </label>
+                `).join('')}
+            `;
+            document.getElementById('quiz-submit').style.display = 'block';
+            document.getElementById('quiz-submit').innerText = currentQuestionIndex === 29 ? 'Finish' : 'Next';
+            document.getElementById('quiz-quit').style.display = 'block';
+            document.getElementById('quiz-feedback').innerHTML = '';
+            document.getElementById('quiz-submit').onclick = () => {
+                console.log('Submit button clicked');
+                submitMissionAnswer();
+            };
+            document.getElementById('quiz-quit').onclick = () => {
+                console.log('Quit button clicked');
+                showScoreModal();
+            };
+        }
+
+        function submitMissionAnswer() {
+            console.log(`Submitting answer for question ${currentQuestionIndex + 1}`);
+            const selectedOption = document.querySelector('input[name="mission-answer"]:checked');
+            if (!selectedOption) {
+                document.getElementById('quiz-feedback').innerHTML = '<p class="text-red-600">Please select an answer.</p>';
+                return;
+            }
+            const answerIndex = parseInt(selectedOption.value);
+            userAnswers.push(answerIndex);
+            if (answerIndex === missionQuestions[currentQuestionIndex].correct) {
+                missionScore += 3;
+            }
+            currentQuestionIndex++;
+            if (currentQuestionIndex < missionQuestions.length) {
+                showMissionQuestion();
+            } else {
+                console.log('Finished quiz, showing score modal');
+                showScoreModal();
+            }
+        }
+
+        function showScoreModal() {
+            console.log('Showing score modal');
+            const scoreModal = document.getElementById('score-modal');
+            const scoreText = document.getElementById('score-text');
+            if (!scoreModal || !scoreText) {
+                console.error('Score modal or score text not found');
+                alert('Error: Score modal not found. Your score is ' + Math.floor(missionScore / 3) + '/30. Please refresh the page.');
+                document.getElementById('quiz-feedback').innerHTML = `<p class="text-red-600">Error: Score modal not found. Your score is ${Math.floor(missionScore / 3)}/30.</p>`;
+                return;
+            }
+            const quizModal = document.getElementById('quiz-modal');
+            quizModal.style.display = 'none';
+            scoreModal.style.display = 'flex';
+
+            const today = new Date().toISOString().split('T')[0];
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+            const lastAttemptDate = localStorage.getItem('lastAttemptDate') || '';
+            streak = lastAttemptDate === yesterday ? streak + 1 : 1;
+            localStorage.setItem('lastAttemptDate', today);
+            localStorage.setItem('streak', streak);
+
+            const correctAnswers = Math.floor(missionScore / 3);
+            console.log(`Correct answers: ${correctAnswers}/30`);
+
+            const timestamp = new Date().toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg' });
+            quizHistory.push({ score: correctAnswers, timestamp });
+            localStorage.setItem('quizHistory', JSON.stringify(quizHistory));
+
+            window.xp += missionScore;
+            window.badges.push(`Daily Mission Streak ${streak}`);
+            updateProgress();
+
+            scoreText.innerHTML = `
+                <i class="fas fa-trophy trophy-icon"></i>
+                <p class="text-xl font-semibold text-gray-800 mb-2">Your Score: ${correctAnswers}/30</p>
+                <p class="text-green-primary">Earned ${missionScore} XP! Streak: ${streak} day(s)</p>
+                <p class="text-gray-600 mt-2">Previous Scores:</p>
+                <ul class="list-disc ml-5">
+                    ${quizHistory.slice(-5).reverse().map(entry => `<li>${entry.score}/30 (${entry.timestamp})</li>`).join('')}
+                </ul>
+            `;
+            console.log('Score modal content set:', scoreText.innerHTML);
+            speakSolution(`You scored ${correctAnswers} out of 30. Streak: ${streak} days.`);
+            trackInteraction('mission', 'daily_mission_completed', `Score: ${correctAnswers}/30`);
+            if (stream) {
+                document.getElementById('camera-feed').style.display = 'block';
+            }
+            startDigitalHumanVideo();
+        }
+
+        function showSolutionsPage() {
+            console.log('Showing solutions page');
+            const scoreModal = document.getElementById('score-modal');
+            const solutionsModal = document.getElementById('solutions-modal');
+            scoreModal.style.display = 'none';
+            solutionsModal.style.display = 'flex';
+            const solutionsText = document.getElementById('solutions-text');
+            solutionsText.innerHTML = `
+                <h3 class="text-lg font-semibold text-gray-800">Solutions</h3>
+                ${missionQuestions.map((q, i) => `
+                    <div class="solution">
+                        <p><strong>Question ${i + 1}: ${q.question}</strong></p>
+                        <p>Correct Answer: ${q.options[q.correct]}</p>
+                        <p>Explanation: ${q.explanation}</p>
+                        <p>Your Answer: ${userAnswers[i] !== undefined ? q.options[userAnswers[i]] : 'Not answered'}</p>
+                    </div>
+                `).join('')}
+            `;
+            if (stream) {
+                document.getElementById('camera-feed').style.display = 'block';
+            }
+            startDigitalHumanVideo();
+        }
+
+        // Button Setup
+        const arButton = document.getElementById('ar-button');
+        arButton.addEventListener('click', () => {
+            console.log('Start Scan button clicked');
+            startCamera();
+        });
+
+        const stopScanButton = document.getElementById('stop-scan-button');
+        stopScanButton.addEventListener('click', () => {
+            console.log('Stop Scan button clicked');
+            showOptions();
+        });
+
+        async function startCamera() {
+            console.log('Attempting to start camera');
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Camera API not supported');
+                }
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+                console.log('Camera stream acquired');
+                video.srcObject = stream;
+                video.play();
+                document.getElementById('ar-button').classList.add('hidden');
+                document.getElementById('stop-scan-button').classList.remove('hidden');
+                document.getElementById('scan-instructions').classList.remove('hidden');
+                speakIntro();
+            } catch (error) {
+                console.error('Camera Start Failed:', error);
+                let errorMsg = 'Failed to open camera: ';
+                if (error.name === 'NotAllowedError') {
+                    errorMsg += 'Camera permission denied. Please allow camera access in settings.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg += 'No camera found on device.';
+                } else {
+                    errorMsg += error.message;
+                }
+                errorMsg += ' Using 2D mode.';
+                document.getElementById('error-message').textContent = errorMsg;
+                document.getElementById('error-message').classList.remove('hidden');
+                setTimeout(() => document.getElementById('error-message').classList.add('hidden'), 5000);
+                enable2DFallback();
+            }
+        }
+
+        function stopCamera() {
+            console.log('Stopping camera');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                document.getElementById('scan-instructions').classList.add('hidden');
+                document.getElementById('stop-scan-button').classList.add('hidden');
+                document.getElementById('camera-feed').style.display = 'none';
+            }
+        }
+
+        function showOptions() {
+            console.log('Showing options');
+            document.getElementById('options-buttons').style.display = 'flex';
+            document.getElementById('scan-instructions').classList.add('hidden');
+            document.getElementById('stop-scan-button').classList.add('hidden');
+            trackInteraction('camera', 'options_displayed', 'Manual scan');
+        }
+
+        function showScenarios() {
+            console.log('Showing scenarios');
+            document.getElementById('options-buttons').style.display = 'none';
+            document.getElementById('scenario-buttons').style.display = 'flex';
+            trackInteraction('camera', 'scenarios_displayed', 'Manual scan');
+        }
+
+        function showCustomChallenge() {
+            console.log('Showing custom challenge');
+            const modal = document.getElementById('quiz-modal');
+            modal.style.display = 'flex';
+            const quizText = document.getElementById('quiz-question');
+            quizText.innerHTML = `
+                <p>Build something that tackles financial challenges — from financial inclusion to payment efficiency to financial literacy</p>
+                <textarea id="custom-challenge" class="w-full p-2 border rounded-md" rows="4">Build something that tackles financial challenges — from financial inclusion to payment efficiency to financial literacy</textarea>
+            `;
+            document.getElementById('quiz-submit').onclick = submitCustomChallenge;
+            document.getElementById('quiz-quit').style.display = 'none';
+            document.getElementById('options-buttons').style.display = 'none';
+        }
+
+        const scenarios = [
+            {
+                name: 'Budgeting',
+                question: 'How can I create a budget for a low-income household?',
+                solution: 'Use the 50/30/20 rule: 50% for needs (rent, food), 30% for wants (entertainment), 20% for savings or debt repayment. Track expenses monthly.'
+            },
+            {
+                name: 'Debt Management',
+                question: 'What’s the best way to pay off R10,000 credit card debt?',
+                solution: 'Use the snowball method: Pay minimums on all debts, focus extra payments on the smallest balance first, then move to the next.'
+            },
+            {
+                name: 'Savings Plan',
+                question: 'How do I save R5,000 for an emergency fund in a year?',
+                solution: 'Save R417 monthly by cutting non-essential expenses (e.g., dining out) and automating transfers to a savings account.'
+            },
+            {
+                name: 'Investment Options',
+                question: 'What’s a safe investment for a beginner with R2,000?',
+                solution: 'Consider a low-cost ETF or unit trust. Start with a tax-free savings account to minimize fees and risks.'
+            }
+        ];
+
+        function showScenarioQuestion(index) {
+            console.log(`Showing scenario: ${scenarios[index].name}`);
+            const modal = document.getElementById('quiz-modal');
+            modal.style.display = 'flex';
+            const quizText = document.getElementById('quiz-question');
+            quizText.innerHTML = `
+                <p>${scenarios[index].question}</p>
+                <input type="text" id="quiz-answer" placeholder="Enter your answer" class="w-full p-2 border rounded-md">
+            `;
+            document.getElementById('quiz-submit').onclick = () => submitScenarioAnswer(index);
+            document.getElementById('quiz-quit').style.display = 'none';
+        }
+
+        function submitScenarioAnswer(index) {
+            console.log(`Submitting answer for scenario: ${scenarios[index].name}`);
+            const answer = document.getElementById('quiz-answer').value;
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.innerHTML = `
+                <p class="text-green-primary">Solution: ${scenarios[index].solution}</p>
+                <p class="text-green-primary">Earned 100 XP!</p>
+            `;
+            window.xp += 100;
+            window.badges.push(`${scenarios[index].name} Expert`);
+            updateProgress();
+            speakSolution(scenarios[index].solution);
+            document.getElementById('quiz-modal').style.display = 'none';
+            document.getElementById('game-content').classList.remove('hidden');
+            trackInteraction('scenario', `answered_${scenarios[index].name.toLowerCase()}`, answer);
+        }
+
+        async function submitCustomChallenge() {
+            console.log('Submitting custom challenge');
+            const challenge = document.getElementById('custom-challenge').value;
+            if (!challenge) {
+                document.getElementById('quiz-feedback').innerHTML = '<p class="text-red-600">Please enter a financial challenge.</p>';
+                return;
+            }
+            document.getElementById('quiz-modal').style.display = 'none';
+            const responseModal = document.getElementById('ai-response-modal');
+            const responseText = document.getElementById('ai-response-text');
+            const loadingDiv = document.getElementById('ai-response-loading');
+            responseText.innerHTML = '';
+            loadingDiv.style.display = 'flex';
+            responseModal.style.display = 'flex';
+            const aiResponse = await getAIResponse(challenge);
+            const formattedResponse = formatAIResponse(aiResponse);
+            loadingDiv.style.display = 'none';
+            const bonusReward = Math.random() < 0.2;
+            const bonusXP = bonusReward ? 50 : 0;
+            const bonusBadge = bonusReward ? 'Lucky Bonus' : '';
+            if (bonusReward) {
+                window.xp += bonusXP;
+                window.badges.push(bonusBadge);
+                speakSolution('Congratulations! You earned a Lucky Bonus of 50 XP!');
+            }
+            responseText.innerHTML = `
+                ${formattedResponse}
+                <p class="text-green-primary mt-4">Earned ${150 + bonusXP} XP! ${bonusBadge ? 'Lucky Bonus!' : ''}</p>
+            `;
+            window.xp += 150;
+            window.badges.push('Custom Challenge Master');
+            updateProgress();
+            speakSolution(aiResponse);
+            trackInteraction('custom', 'challenge_submitted', challenge);
+
+            const downloadButton = document.getElementById('ai-response-download');
+            downloadButton.onclick = () => {
+                try {
+                    downloadAIResponsePDF(challenge, aiResponse);
+                } catch (error) {
+                    console.error('PDF Download Error:', error);
+                    alert('Failed to download PDF. Please try again.');
+                }
+            };
+        }
+
+        async function getAIResponse(challenge) {
+            const apiKey = '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';
+            const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://ai-apps-top.netlify.app',
+                        'X-Title': 'Financial World Quest'
+                    },
+                    body: JSON.stringify({
+                        model: 'openai/gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'user',
+                                content: `Provide a detailed, practical response to the following financial challenge, including actionable steps and links to relevant resources (e.g., financial literacy tools like MyMoney.gov, budgeting apps like YNAB, inclusion programs like stokvels). Format the response in markdown with headings (#), bullet points (-), bold text (**), and hyperlinks ([Text](URL)): ${challenge}`
+                            }
+                        ]
+                    })
+                });
+                const data = await response.json();
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    return data.choices[0].message.content;
+                }
+                return 'No response from AI model.';
+            } catch (error) {
+                console.error('OpenRouter API Error:', error);
+                return 'Failed to get AI response. Please try again.';
+            }
+        }
+
+        function formatAIResponse(response) {
+            let formatted = response
+                .replace(/^# (.*)$/gm, '<h3>$1</h3>')
+                .replace(/^\* (.*)$/gm, '<ul><li>$1</li></ul>')
+                .replace(/^- (.*)$/gm, '<ul><li>$1</li></ul>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/<\/ul>\n<ul>/g, '')
+                .replace(/[\*\#]/g, '');
+            return formatted;
+        }
+
+        function downloadAIResponsePDF(challenge, response) {
+            console.log('Downloading AI response PDF');
+            const { jsPDF } = window.jspdf;
+            try {
+                const doc = new jsPDF();
+                const cleanResponse = response.replace(/[#-*]|\[.*?\]\(.*?\)/g, '');
+                const content = `Financial Challenge Response\n\nChallenge: ${challenge}\n\nResponse:\n${cleanResponse}`;
+                const splitText = doc.splitTextToSize(content, 170);
+                doc.setFont("helvetica");
+                doc.setFontSize(12);
+                doc.text(splitText, 20, 20);
+                doc.save("financial-challenge-response.pdf");
+                trackInteraction('export', 'ai_response_pdf_downloaded', challenge);
+            } catch (error) {
+                console.error('PDF Generation Error:', error);
+                throw error;
+            }
+        }
+
+        function enable2DFallback() {
+            console.log('Enabling 2D fallback');
+            document.getElementById('ar-button').classList.add('hidden');
+            document.getElementById('stop-scan-button').classList.add('hidden');
+            document.getElementById('options-buttons').style.display = 'flex';
+            document.getElementById('game-content').classList.remove('hidden');
+            document.getElementById('camera-feed').style.display = 'none';
+            speakIntro();
+        }
+
+        function speakIntro() {
+            console.log('Playing intro voice');
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance('Welcome to Financial World Quest. Scan your environment, then choose Scenarios, Custom Challenge, or Daily Mission.');
+                utterance.lang = 'en-ZA';
+                utterance.rate = 0.8;
+                speechSynthesis.speak(utterance);
+            } else {
+                console.warn('SpeechSynthesis not supported');
+            }
+        }
+
+        function speakSolution(solution) {
+            console.log('Speaking solution');
+            if ('speechSynthesis' in window) {
+                const cleanSolution = solution.replace(/[#-*]|\[.*?\]\(.*?\)/g, '');
+                const utterance = new SpeechSynthesisUtterance(cleanSolution);
+                utterance.lang = 'en-ZA';
+                utterance.rate = 0.8;
+                speechSynthesis.speak(utterance);
+            } else {
+                console.warn('SpeechSynthesis not supported');
+            }
+        }
+
+        async function trackInteraction(category, action, label = "") {
+            console.log(`Tracking interaction: ${category}, ${action}, ${label}`);
+            try {
+                await addDoc(collection(db, 'interactions'), {
+                    tempUserId: tempUserId,
+                    category: category,
+                    action: action,
+                    label: label,
+                    timestamp: serverTimestamp(),
+                    language: 'en',
+                    userAgent: navigator.userAgent
+                });
+            } catch (error) {
+                console.error("Error logging interaction:", error);
+            }
+        }
+
+        function optimizeBudget() {
+            console.log('Optimizing budget');
+            const income = parseFloat(document.getElementById('income').value) || 0;
+            const expenses = parseFloat(document.getElementById('expenses').value) || 0;
+            const resultDiv = document.getElementById('budget-result');
+            if (!income || !expenses) {
+                resultDiv.innerHTML = '<p class="text-red-600">Please enter income and expenses.</p>';
+                return false;
+            }
+            const savings = income - expenses;
+            const cluster = savings > 1000 ? 'Saver' : savings > 0 ? 'Balanced' : 'Spender';
+            window.xp += 150;
+            window.badges.push('Budget Master');
+            resultDiv.innerHTML = `
+                <p>Savings: R${savings}</p>
+                <p>Cluster: ${cluster}</p>
+                <p>Strategy: ${cluster === 'Saver' ? 'Contribute R500 to a stokvel.' : 'Reduce expenses by 10% to avoid debt.'}</p>
+                <p class="text-green-primary">Earned 150 XP!</p>
+            `;
+            updateProgress();
+            trackInteraction('financial', 'budget_optimized', cluster);
+            return false;
+        }
+
+        window.xp = parseInt(localStorage.getItem('xp')) || 0;
+        window.badges = JSON.parse(localStorage.getItem('badges')) || [];
+        function updateProgress() {
+            console.log('Updating progress');
+            document.getElementById('xp').textContent = window.xp;
+            document.getElementById('badges').innerHTML = window.badges.map(b => `<span class="text-green-primary font-semibold">${b}</span>`).join(', ');
+            document.getElementById('streak').textContent = `Streak: ${streak} day(s)`;
+            const progress = Math.min((window.xp / 1000) * 100, 100);
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `Level ${Math.floor(window.xp / 500) + 1}: ${window.xp >= 1000 ? 'Expert' : window.xp >= 500 ? 'Advanced' : 'Strategist'}`;
+            localStorage.setItem('xp', window.xp);
+            localStorage.setItem('badges', JSON.stringify(window.badges));
+        }
+
+        function downloadProgressPDF() {
+            console.log('Downloading progress PDF');
+            const { jsPDF } = window.jspdf;
+            try {
+                const doc = new jsPDF();
+                const content = `Financial World Quest Report\n\nScore: ${window.xp} XP\nStreak: ${streak} day(s)\nBadges: ${window.badges.join(', ')}\n\nQuiz History:\n${quizHistory.map(entry => `${entry.score}/30 (${entry.timestamp})`).join('\n')}\n\nFinancial: Optimized budget and solved scenarios.`;
+                const splitText = doc.splitTextToSize(content, 170);
+                doc.setFont("helvetica");
+                doc.setFontSize(12);
+                doc.text(splitText, 20, 20);
+                doc.save("financial-quest-report.pdf");
+                trackInteraction('export', 'pdf_downloaded', 'Strategy Report');
+            } catch (error) {
+                console.error('Progress PDF Download Error:', error);
+                alert('Failed to download progress PDF. Please try again.');
+            }
+            return false;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded');
+            document.body.classList.add('loading');
+            const loadingOverlay = document.querySelector('.loading-overlay');
+            trackInteraction('page', 'loaded', 'Financial World Quest Manual');
+
+            setTimeout(() => {
+                document.body.classList.remove('loading');
+                document.body.classList.add('loaded');
+                loadingOverlay.style.display = 'none';
+                updateProgress();
+                speakIntro();
+                startDigitalHumanVideo();
+            }, 2000);
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.log('Camera API not supported');
+                document.getElementById('error-message').textContent = 'Camera not supported. Use 2D mode.';
+                document.getElementById('error-message').classList.remove('hidden');
+                document.getElementById('ar-button').classList.add('hidden');
+                enable2DFallback();
+            }
+
+            document.getElementById('option-scenarios').onclick = () => {
+                showScenarios();
+                trackInteraction('options', 'scenarios_selected', 'Options Screen');
+            };
+            document.getElementById('option-custom').onclick = () => {
+                showCustomChallenge();
+                trackInteraction('options', 'custom_selected', 'Options Screen');
+            };
+            document.getElementById('option-daily').onclick = () => {
+                showDailyMission();
+                trackInteraction('options', 'daily_mission_selected', 'Options Screen');
+            };
+
+            document.getElementById('scenario-budgeting').onclick = () => showScenarioQuestion(0);
+            document.getElementById('scenario-debt').onclick = () => showScenarioQuestion(1);
+            document.getElementById('scenario-savings').onclick = () => showScenarioQuestion(2);
+            document.getElementById('scenario-investment').onclick = () => showScenarioQuestion(3);
+
+            document.getElementById('budget-section-button').onclick = () => {
+                stopCamera();
+                document.getElementById('options-buttons').style.display = 'none';
+                document.getElementById('scenario-buttons').style.display = 'none';
+                document.getElementById('budget-section').classList.remove('hidden');
+                trackInteraction('2d', 'budget_selected', '2D Mode');
+            };
+
+            document.getElementById('ai-response-close').onclick = () => {
+                document.getElementById('ai-response-modal').style.display = 'none';
+                document.getElementById('game-content').classList.remove('hidden');
+                if (stream) {
+                    document.getElementById('camera-feed').style.display = 'block';
+                }
+                startDigitalHumanVideo();
+            };
+
+            document.getElementById('score-view-solutions').onclick = () => {
+                console.log('View Solutions button clicked');
+                showSolutionsPage();
+            };
+
+            document.getElementById('solutions-close').onclick = () => {
+                document.getElementById('solutions-modal').style.display = 'none';
+                document.getElementById('game-content').classList.remove('hidden');
+                if (stream) {
+                    document.getElementById('camera-feed').style.display = 'block';
+                }
+                startDigitalHumanVideo();
+            };
+        });
+    </script>
+</head>
+<body class="loading">
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    <div id="root" class="flex flex-col min-h-screen">
+        <main class="flex-grow flex items-center justify-center py-16 relative">
+            <div class="blurry-bg"></div>
+            <div class="form-container max-w-4xl w-full mx-4 p-8">
+                <div class="flex justify-center mb-4">
+                    <i class="fas fa-piggy-bank text-4xl text-green-primary"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Financial World Quest: Camera Scan</h2>
+                <div id="error-message" class="error-message hidden text-center text-red-600"></div>
+                <div class="space-y-6">
+                    <div class="progress-section">
+                        <label class="block text-sm font-medium text-gray-700">Your Progress</label>
+                        <div class="w-full bg-gray-200 rounded-full h-4 mt-2">
+                            <div id="progress-bar" class="bg-green-primary h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <p id="progress-text" class="text-sm text-gray-600 mt-1">Level 1: Strategist</p>
+                        <p id="streak" class="text-sm text-gray-600 mt-1">Streak: 0 day(s)</p>
+                    </div>
+                    <div class="badges-section">
+                        <h3 class="text-lg font-semibold text-gray-800">Your Badges</h3>
+                        <div id="badges" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-2"></div>
+                    </div>
+                    <div class="game-section">
+                        <h3 class="text-lg font-semibold text-gray-800">Strategic Challenge</h3>
+                        <p class="text-gray-600 mb-4">Tap 'Start Scan', move your phone to scan, tap 'Stop Scan', then choose Scenarios, Custom Challenge, or Daily Mission.</p>
+                        <div id="game-content" class="bg-white p-4 rounded-md shadow hidden">
+                            <div id="2d-fallback" class="hidden mb-4">
+                                <p class="text-gray-700 font-medium">2D Mode: Financial Challenges</p>
+                                <button onclick="document.getElementById('options-buttons').style.display='flex'; trackInteraction('2d', 'options_selected', '2D Mode');" class="w-full sign-up-btn font-semibold py-2 px-4 rounded-md mt-2">Show Options</button>
+                            </div>
+                            <div id="budget-section" class="quest mb-4 hidden">
+                                <p class="text-gray-700 font-medium">Financial: Optimize Household Budget</p>
+                                <input type="number" id="income" placeholder="Income (e.g., R5000)" class="w-full p-2 mt-2 border rounded-md" aria-label="Monthly Income">
+                                <input type="number" id="expenses" placeholder="Expenses (e.g., R4000)" class="w-full p-2 mt-2 border rounded-md" aria-label="Monthly Expenses">
+                                <button onclick="optimizeBudget(); return false;" class="w-full sign-up-btn font-semibold py-2 px-4 rounded-md mt-2">Analyze Budget</button>
+                                <p id="budget-result" class="mt-2 text-gray-700"></p>
+                            </div>
+                            <button id="budget-section-button" class="w-full sign-up-btn font-semibold py-2 px-4 rounded-md mt-2">Budget Challenge</button>
+                            <button onclick="downloadProgressPDF(); return false;" class="w-full sign-up-btn font-semibold py-2 px-4 rounded-md mt-4">Download Strategy Report</button>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-sm text-gray-600">
+                    <a href="/Dashboard/dashboard.html" class="inline-link">Back to Dashboard</a>
+                </p>
+            </div>
+        </main>
+        <button id="ar-button" class="sign-up-btn font-semibold rounded-md">Start Scan</button>
+        <button id="stop-scan-button" class="sign-up-btn font-semibold rounded-md hidden">Stop Scan</button>
+        <div id="options-buttons" class="options-buttons">
+            <div id="option-scenarios" class="option-button">Scenarios</div>
+            <div id="option-custom" class="option-button">Custom Challenge</div>
+            <div id="option-daily" class="option-button">Daily Mission</div>
+        </div>
+        <div id="scenario-buttons" class="scenario-buttons">
+            <div id="scenario-budgeting" class="scenario-button">Budgeting</div>
+            <div id="scenario-debt" class="scenario-button">Debt Management</div>
+            <div id="scenario-savings" class="scenario-button">Savings Plan</div>
+            <div id="scenario-investment" class="scenario-button">Investment Options</div>
+        </div>
+        <div id="quiz-modal" class="quiz-modal">
+            <div class="quiz-content">
+                <h3 class="text-lg font-semibold text-gray-800">Daily Mission: Financial Quiz</h3>
+                <div id="quiz-question"></div>
+                <div id="quiz-feedback"></div>
+                <button id="quiz-submit" class="sign-up-btn">Next</button>
+                <button id="quiz-quit" class="sign-up-btn bg-red-600 hover:bg-red-700">Quit</button>
+            </div>
+        </div>
+        <div id="ai-response-modal" class="ai-response-modal">
+            <div class="ai-response-content">
+                <h3 class="text-lg font-semibold text-gray-800">AI Response</h3>
+                <div id="ai-response-loading" class="ai-response-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Generating...</p>
+                </div>
+                <div id="ai-response-text"></div>
+                <button id="ai-response-download" class="sign-up-btn">Download PDF</button>
+                <button id="ai-response-close" class="sign-up-btn">Close</button>
+            </div>
+        </div>
+        <div id="score-modal" class="score-modal">
+            <div class="score-content">
+                <h3 class="text-lg font-semibold text-gray-800">Mission Results</h3>
+                <i id="trophy-icon" class="fas fa-trophy trophy-icon"></i>
+                <div id="score-text"></div>
+                <button id="score-view-solutions" class="sign-up-btn">View Solutions</button>
+            </div>
+        </div>
+        <div id="solutions-modal" class="solutions-modal">
+            <div class="solutions-content">
+                <h3 class="text-lg font-semibold text-gray-800">Solutions</h3>
+                <div id="solutions-text"></div>
+                <button id="solutions-close" class="sign-up-btn">Close</button>
+            </div>
+        </div>
+        <div id="scan-instructions" class="scan-instructions hidden">Move your phone to scan...</div>
+        <video id="camera-feed" autoplay playsinline></video>
+        <div class="digital-human-container">
+            <video id="digital-human-video" autoplay playsinline loop>
+                <source src="assets/Finance.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <div id="error-message-video" class="error-message-video"></div>
+    </div>
+</body>
+</html>

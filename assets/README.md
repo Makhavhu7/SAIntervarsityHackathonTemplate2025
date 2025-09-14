@@ -1,4 +1,4 @@
 # Assets
-All assets used by your project such as **images**, **audio files**, **3D models** and so-on, should be placed in this folder.
 
-> You may delete this file from your repository.
+- Finance.mp4: Digital human video for interactive feedback in Financial World Quest.
+- (Optional) background.jpg: Blurry background image from Unsplash (used in index.html).
