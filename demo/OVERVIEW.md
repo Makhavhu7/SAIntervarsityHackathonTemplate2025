@@ -1,53 +1,29 @@
-Project Overview
+> *This document serves as a template for you to write a **brief overview** of your project.*
 
-🎯 Project Name
+# Project Overview
 
-Financial World Quest
+## 🎯 Project Name
+``` c
+// TODO: Enter your project name here
+```
 
-🚀 Summary
+## 🚀 Summary
+``` c
+// TODO: Write a short, high-level description of your
+// project (2–3 sentences).
+```
 
-A gamified web app for financial literacy in South Africa, featuring an Augmented Reality (AR) camera scan to initiate quests, 30-question quizzes with trophies, a trained ML financial advisor (scikit-learn), and budgeting tools. Built for the Financial Solution category.
+## ✨ Key Features
+``` c
+// TODO: List key features.
+```
 
-✨ Key Features
+## 💡 Inspiration
+``` c
+// TODO: Briefly explain the motivation behind your project.
+```
 
-
-
-
-
-AR Camera Scan: Engages users by scanning their environment to start financial quests, leveraging AR for immersive learning.
-
-
-
-30-question financial literacy quiz with score (e.g., 23/30) and animated trophy.
-
-
-
-ML-based financial advice (logistic regression, SA-specific).
-
-
-
-Budget optimizer with XP and badges.
-
-
-
-Digital human video (toggle full-screen, audio).
-
-💡 Inspiration
-
-Inspired by the need for engaging financial education, using AR to make learning interactive and stokvels for cultural relevance.
-
-📌 Future Improvements
-
-
-
-
-
-Enhance AR with 3D financial visualizations.
-
-
-
-Fine-tune larger LLM (e.g., via RunPod GPU).
-
-
-
-Add multiplayer quizzes and stokvel API.
+## 📌 Future Improvements
+``` c
+// TODO: Mention ideas or features you’d add if given more time.
+```

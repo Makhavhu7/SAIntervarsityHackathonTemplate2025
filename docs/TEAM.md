@@ -12,16 +12,17 @@
 ## 👥 Members
 | Name     | Role                | Institution           | Discord Handle | Email |
 |----------|---------------------|-----------------------| -------------------|-------------|
-| **Name 1**   | Backend Developer   | University of Johannesburg | name1 | <mbofhenijunior7@gmial.com> |
-| **Name 2**   | Frontend Developer  | University of Johannesburg | name2 | <email2@gmail.com> |
+| **Name 1**   | Backend Developer   | University of Cape Town | name1 | <email1@gmail.com> |
+| **Name 2**   | Frontend Developer  | University of the Witwatersrand | name2 | <email2@gmail.com> |
 | **Name 3**   | Designer            | University of Johannesburg | name3 | <email3@gmail.com> |
-| **Name 4**   | Q.A Tester          | University of Johannesburg | name4 | <email4@gmail.com> |
+| **Name 4**   | Q.A Tester          | University of the Western Cape | name4 | <email4@gmail.com> |
 
 ## 🏫 Institution
 ``` c
-// University Of Johannesburg
+// TODO: Fill-in the name of the institution your
+// team is competing under.
 ```
 
 ## 📧 Other Contact Info
-- GitHub Repo: https://github.com/Makhavhu7/AI-FINANCE-APP
-- Other Info (if available): ai-apps-top.netlify.app
+- GitHub Repo: <https://github.com/user-name/repo-name>
+- Other Info (if available): LinkedIn, Website, etc.

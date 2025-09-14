@@ -1,4 +1,4 @@
-# Source Code
-- `index.html`: Landing Page
-- `financial.html`: Main Financial World Quest app with camera scan, quizzes, AI advice, and budgeting. Standalone digital human video.
-- `app.py`: Python FastAPI backend for Financial LLM (Hugging Face).
+# Src
+All source code files should be placed in this folder. You may organize this folder as needed (e.g., `backend/`, `frontend/`, `lib/`, `source/` and or `include/` folders and so on).
+
+> You may delete this file from your repository.

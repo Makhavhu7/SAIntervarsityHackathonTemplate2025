@@ -1,17 +1,35 @@
+> *This document serves as a template for you to write **setup** instructions for your project.* 
+
+> Depending on the scale/complexity of your project, it may prove beneficial to have a **Python/Batch/Bash** script in the `scripts/` directory which *automatically sets-up* the project.
+
 # Setup Instructions
 
+Follow the steps below to set up and run the project. (Example)
+
+---
+
 ## 📦 Requirements
-- Modern browser (Chrome 120+ or Samsung Internet on Honor 90).
-- Internet connection for Firebase and OpenRouter APIs.
-- Optional: Python 3.10+ for KNN prototype (not integrated).
-- No server setup needed (static HTML/JS).
+``` c
+// TODO: List software, runtimes, frameworks, and or dependencies
+// along with instructions on how to set each up.
+```
+- Example: Node.js v18+
+- Example: Python 3.10
+- Example: Docker
+
+---
 
 ## ⚙️ Installation
-```bash
+``` bash
 # Clone the repository
-git clone https://github.com/YourUsername/SAIntervarsityHackathon-FinancialWorldQuest-2025.git
-cd SAIntervarsityHackathon-FinancialWorldQuest-2025
+git clone <your-repo-url>
+cd <repo-name>
 
-# No dependencies to install (CDN-based)
-# Optional: Install Python dependencies for KNN prototype
-pip install scikit-learn numpy pandas
+# Install dependencies
+<insert command here>
+```
+
+## ▶️ Running the Project
+``` bash
+<insert run command here> # Or an explanation on what to do
+```

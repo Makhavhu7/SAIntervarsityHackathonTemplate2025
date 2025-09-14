@@ -1,69 +1,35 @@
-Usage Guide
+> *This document serves as a template for you to write **usage** instructions for your project.* 
 
-▶️ Running the Application
+# Usage Guide
 
+## ▶️ Running the Application
+``` c
+// TODO: Explain how to launch the project.
+// Add commands or steps here.
+```
+``` bash
+# Example
+npm start
+```
 
+## 🖥️ How to Use
+``` c
+// TODO: Provide step-by-step usage instructions for judges/users.
+```
+1. Step 1 -> Do this
+2. Step 2 -> Then this
+3. Step 3 -> See the output/result
 
+## 🎥 Demo
+``` c
+// TODO: Link your demo video and PowerPoint here
+```
+Check out the Demos: 
+- [Demo Video](../demo/demo.mp4)
+- [Demo Presentation](../demo/demo.pptx)
 
-
-Web: Open src/index.html in Chrome.
-
-
-
-Backend: python src/app.py (runs on http://localhost:8000).
-
-🖥️ How to Use
-
-
-
-
-
-Open index.html.
-
-
-
-Click 'Start Scan' (allow camera), move phone to scan environment using AR, click 'Stop Scan' to begin quest.
-
-
-
-Select 'Daily Mission': Answer 30 financial questions, quit/finish for score (e.g., 23/30) with trophy.
-
-
-
-Select 'Custom Challenge': Enter query (e.g., "budget R5000"), get ML advice, download PDF.
-
-
-
-Select 'Budget Challenge': Input income/expenses (e.g., R5000/R4000), get analysis.
-
-
-
-Click digital human video to expand (sound on, loops); click to shrink (muted).
-
-🎥 Demo
-
-
-
-
-
-Demo Video: [https://youtube.com/your-video-link]
-
-
-
-PowerPoint: demo/demo.pptx
-
-📌 Notes
-
-
-
-
-
-Video: assets/Finance.mp4 (or Firebase URL).
-
-
-
-AR: Camera scan uses Augmented Reality to engage users in real-world contexts.
-
-
-
-AI: Trained logistic regression model, CPU-efficient; could use GPU-based LLM for richer responses.
+## 📌 Notes
+``` c
+// TODO: Add any special instructions, caveats, or tips
+// for using your project.
+```
